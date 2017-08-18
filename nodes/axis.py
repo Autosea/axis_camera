@@ -7,13 +7,15 @@
 
 import threading
 import urllib2
-
+from axis_camera.msg import Axis as AxisPTZ
 import rospy 
 from sensor_msgs.msg import CompressedImage, CameraInfo
 import camera_info_manager
-
+def callback(msg):
+    print msg.zoom
 class StreamThread(threading.Thread):
     def __init__(self, axis):
+        rospy.loginfo("Stream thread started")
         threading.Thread.__init__(self)
         self.axis = axis
         self.daemon = True
@@ -144,18 +146,18 @@ class Axis:
         self.width = width
         self.height = height
         self.frame_id = frame_id
-        self.camera_info_url = camera_info_url
+        self.camera_info_url = "package://axis_camera/calibration/calibration_zoom_1.yaml"
         self.use_encrypted_password = use_encrypted_password
-        
+        self.zoom_list = [1, 894, 2725, 4513, 6386, 8215, 9959, 9999, 19999]
         # generate a valid camera name based on the hostname
-        self.cname = camera_info_manager.genCameraName(self.hostname)
-        self.cinfo = camera_info_manager.CameraInfoManager(cname = self.cname,
-                                                   url = self.camera_info_url)
+        self.cname = "axis"
+        self.cinfo = camera_info_manager.InterpolatingZoomCameraInfoManager("package://axis_camera/calibration/calibration_zoom_%d.yaml", self.zoom_list, cname = self.cname, url = self.camera_info_url)
+        #self.cinfo = camera_info_manager.CameraInfoManager(cname = self.cname, url = self.camera_info_url)
         self.cinfo.loadCameraInfo()         # required before getCameraInfo()
         self.st = None
         self.pub = rospy.Publisher("image_raw/compressed", CompressedImage, self, queue_size=1)
         self.caminfo_pub = rospy.Publisher("camera_info", CameraInfo, self, queue_size=1)
-
+        self.ptz_sub = rospy.Subscriber("state", AxisPTZ, self.ptz_callback)
     def __str__(self):
         """Return string representation."""
         return(self.hostname + ',' + self.username + ',' + self.password +
@@ -167,18 +169,21 @@ class Axis:
             self.st = StreamThread(self)
             self.st.start()
 
+	
+    def ptz_callback(self, msg):
+        self.cinfo.set_zoom(msg.zoom)
 
 def main():
     rospy.init_node("axis_driver")
 
     arg_defaults = {
-        'hostname': '192.168.0.90',       # default IP address
+        'hostname': '192.168.1.11',       # default IP address
         'username': 'root',               # default login name
         'password': '',
-        'width': 640,
-        'height': 480,
+        'width': 1280,
+        'height': 720,
         'frame_id': 'axis_camera',
-        'camera_info_url': '',
+        'camera_info_url': 'package://axis_camera/calibration/calibration_zoom_1.yaml',
         'use_encrypted_password' : False}
     args = updateArgs(arg_defaults)
     Axis(**args)

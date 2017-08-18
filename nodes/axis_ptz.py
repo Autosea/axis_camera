@@ -109,7 +109,7 @@ class AxisPTZ:
         self.mirror = False
 
         self.st = None
-        self.pub = rospy.Publisher("state", Axis, self, queue_size=1)
+        self.pub = rospy.Publisher("/axis/state", Axis, self, queue_size=1)
         self.sub = rospy.Subscriber("cmd", Axis, self.cmd, queue_size=1)
         self.sub_mirror = rospy.Subscriber("mirror", Bool, self.mirrorCallback,
                                                                 queue_size=1)
@@ -279,9 +279,9 @@ def main():
     rospy.init_node("axis_twist")
 
     arg_defaults = {
-        'hostname': '192.168.0.90',
-        'username': '',
-        'password': '',
+        'hostname': '192.168.1.11',
+        'username': 'root',
+        'password': 'root',
         'flip': False,  # things get weird if flip=true
         'speed_control': False
         }
